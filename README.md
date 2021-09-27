@@ -14,6 +14,9 @@ Please visit the [melt Wiki](https://github.com/gargansa/MELT/wiki) for more inf
 [melt](https://github.com/gargansa/MELT) is a plugin that adds support for some of the new / advanced features of the [M3D ProMega 3D Printer](https://store.printm3d.com/pages/promega).
 
 ## Version History
+V4.0.1 add in marlin gcode option using M163 and M164.
+*	Mainly for use with Geeetech A30T 3 filiment to 1 extruder colour mixing.
+*	Could be used with other 3D Printers that do not support M567 command.
 
 
 ## Current Features List

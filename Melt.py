@@ -49,8 +49,8 @@ def initiate_extruder(existing_gcode, *gcode):
     return setup_line
 
 
-# Function to compile extruder info into a string
-def adjust_extruder_rate(existing_gcode, *ext):
+# Function to compile extruder info into a string keep old code rename
+def adjust_extruder_rate_duet(existing_gcode, *ext):
     i = 0
     for item in ext:
         if i == 0:
@@ -60,7 +60,16 @@ def adjust_extruder_rate(existing_gcode, *ext):
         i += 1
     setup_line += "\n"
     return setup_line
-
+    
+# Function to compile extruder info into a string for marlin gcode
+def adjust_extruder_rate_marlin(existing_gcode, *ext):
+    i = 0
+    setup_line = existing_gcode
+    for item in ext:
+        setup_line += "\nM163 S" + str(i) + " P" + str(item)
+        i += 1
+    setup_line += "\nM164 S0\n"
+    return setup_line
 
 # Just used to output info to text file to help debug
 def print_debug(*report_data):
@@ -72,7 +81,7 @@ def print_debug(*report_data):
 
 
 class Melt(Script):
-    version = "3.4.0"
+    version = "4.0.1"
 
     def __init__(self):
         super().__init__()
@@ -90,7 +99,7 @@ class Melt(Script):
                     "label": "Firmware Type",
                     "description": "Type of Firmware Supported.",
                     "type": "enum",
-                    "options": {"duet":"Duet"},
+                    "options": {"duet":"Duet","marlin":"Marlin"},
                     "default_value": "duet"
                 },
                 "qty_extruders":
@@ -347,6 +356,7 @@ class Melt(Script):
 
     def execute(self, data: list):  # used to be data: list
         # Set user settings from cura
+        firmware = self.getSettingValueByKey("firmware_type") # need this to tell us what firmware we are using
         clamp_choice = self.getSettingValueByKey("a_trigger")
         direction = self.getSettingValueByKey("b_trigger")
 
@@ -452,12 +462,20 @@ class Melt(Script):
                     if has_been_run == 0:
                         if enable_initial:
                             modified_gcode += initiate_extruder("", initial_a, initial_b, initial_c, initial_d, initial_e)
-                        if direction == 'normal':
-                            modified_gcode += adjust_extruder_rate("", *ext_gcode_list)
-                        else:
-                            modified_gcode += adjust_extruder_rate("", *ext_gcode_list[::-1])
+                            
+                        if firmware == 'duet':      # keep origial code 
+                            if direction == 'normal':
+                                modified_gcode += adjust_extruder_rate_duet(line, *ext_gcode_list)
+                            else:
+                                modified_gcode += adjust_extruder_rate_duet(line, *ext_gcode_list[::-1])
+                        elif firmware == 'marlin':
+                            if direction == 'normal':
+                                modified_gcode += adjust_extruder_rate_marlin(line, *ext_gcode_list)
+                            else:
+                                modified_gcode += adjust_extruder_rate_marlin(line, *ext_gcode_list[::-1])
 
                     # DEBUG FOR USER REPORTING
+                    modified_gcode += print_debug("Firmware:", firmware) # put this into gcode for what firmware is used
                     modified_gcode += print_debug("Version:", self.version)
                     modified_gcode += print_debug("Clamp_choice:", clamp_choice, "  Direction:", direction)
                     modified_gcode += print_debug("Modifier:", modifier, "  Rate Modifier:", rate_modifier)
@@ -517,11 +535,17 @@ class Melt(Script):
                         gcode_index += 1
 
                     # TURN THE EXTRUDER VALUES INTO A SINGLE GCODE LINE
-                    if direction == 'normal':
-                        modified_gcode += adjust_extruder_rate(line, *ext_gcode_list)
-                    else:
-                        modified_gcode += adjust_extruder_rate(line, *ext_gcode_list[::-1])
-
+                    if firmware == 'duet':      # keep origial code 
+                        if direction == 'normal':
+                            modified_gcode += adjust_extruder_rate_duet(line, *ext_gcode_list)
+                        else:
+                            modified_gcode += adjust_extruder_rate_duet(line, *ext_gcode_list[::-1])
+                    elif firmware == 'marlin':
+                        if direction == 'normal':
+                            modified_gcode += adjust_extruder_rate_marlin(line, *ext_gcode_list)
+                        else:
+                            modified_gcode += adjust_extruder_rate_marlin(line, *ext_gcode_list[::-1])
+                    
                     # CHANGE THE POSITION FOR NEXT RUN
                     if rate_modifier == 'normal':
                         current_position += standard_rate(change_rate)
@@ -554,10 +578,16 @@ class Melt(Script):
                         gcode_index += 1
 
                     # change direction of shift if set by user
-                    if direction == 'normal':
-                        modified_gcode += adjust_extruder_rate(line, *ext_gcode_list)
-                    else:
-                        modified_gcode += adjust_extruder_rate(line, *ext_gcode_list[::-1])
+                    if firmware == 'duet':      # keep origial code 
+                        if direction == 'normal':
+                            modified_gcode += adjust_extruder_rate_duet(line, *ext_gcode_list)
+                        else:
+                            modified_gcode += adjust_extruder_rate_duet(line, *ext_gcode_list[::-1])
+                    elif firmware == 'marlin':
+                        if direction == 'normal':
+                            modified_gcode += adjust_extruder_rate_marlin(line, *ext_gcode_list)
+                        else:
+                            modified_gcode += adjust_extruder_rate_marlin(line, *ext_gcode_list[::-1])
 
                 # LEAVE ALL OTHER LINES ALONE SINCE THEY ARE NOT NEW LAYERS
                 else:
